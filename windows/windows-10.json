@@ -1,0 +1,102 @@
+{
+  "builders": [
+    {
+      "accelerator": "kvm",
+      "boot_wait": "6m",
+      "communicator": "winrm",
+      "cpus": "2",
+      "disk_size": "{{user `disk_size`}}",
+      "floppy_files": [
+        "{{user `autounattend`}}",
+        "./floppy/WindowsPowershell.lnk",
+        "./floppy/PinTo10.exe",
+        "./scripts/fixnetwork.ps1",
+        "./scripts/disable-screensaver.ps1",
+        "./scripts/disable-winrm.ps1",
+        "./scripts/enable-winrm.ps1",
+        "./scripts/microsoft-updates.bat",
+        "./scripts/win-updates.ps1"
+      ],
+      "headless": false,
+      "iso_checksum": "{{user `iso_checksum`}}",
+      "iso_url": "{{user `iso_url`}}",
+      "memory": "{{user `memory`}}",
+      "output_directory": "windows_10-qemu",
+      "qemuargs": [
+        [
+          "-drive",
+          "file=windows_10-qemu/{{ .Name }},if=virtio,cache=writeback,discard=ignore,format=qcow2,index=1"
+        ],
+        [
+          "-drive",
+          "file={{ user `iso_url` }},media=cdrom,index=2"
+        ],
+        [
+          "-drive",
+          "file={{ user `virtio_win_iso` }},media=cdrom,index=3"
+        ]
+      ],
+      "shutdown_command": "shutdown /s /t 10 /f /d p:4:1 /c \"Packer Shutdown\"",
+      "type": "qemu",
+      "vm_name": "{{user `vm_name`}}",
+      "winrm_password": "vagrant",
+      "winrm_timeout": "{{user `winrm_timeout`}}",
+      "winrm_username": "vagrant"
+    }
+  ],
+  "provisioners": [
+    {
+      "execute_command": "{{ .Vars }} cmd /c \"{{ .Path }}\"",
+      "remote_path": "/tmp/script.bat",
+      "scripts": [
+        "./scripts/enable-rdp.bat"
+      ],
+      "type": "windows-shell"
+    },
+    {
+      "scripts": [
+        "./scripts/vm-guest-tools.ps1",
+        "./scripts/debloat-windows.ps1"
+      ],
+      "type": "powershell"
+    },
+    {
+      "restart_timeout": "{{user `restart_timeout`}}",
+      "type": "windows-restart"
+    },
+    {
+      "scripts": [
+        "./scripts/set-powerplan.ps1",
+        "./scripts/docker/disable-windows-defender.ps1"
+      ],
+      "type": "powershell"
+    },
+    {
+      "execute_command": "{{ .Vars }} cmd /c \"{{ .Path }}\"",
+      "remote_path": "/tmp/script.bat",
+      "scripts": [
+        "./scripts/pin-powershell.bat",
+        "./scripts/compile-dotnet-assemblies.bat",
+        "./scripts/set-winrm-automatic.bat",
+        "./scripts/uac-enable.bat",
+        "./scripts/dis-updates.bat",
+        "./scripts/compact.bat"
+      ],
+      "type": "windows-shell"
+    }
+  ],
+  "variables": {
+    "autounattend": "./floppy/windows-10/Autounattend.xml",
+    "disk_size": "61440",
+    "disk_type_id": "1",
+    "memory": "4096",
+    "iso_checksum": "sha256:cb8731a17350b2f61ad1c059fc16fd6348530c25e43f631f2691768f767f75c3",
+    "iso_url": "./images/Win10_21H1_EnglishInternational_x64.iso",
+    "restart_timeout": "5m",
+    "vhv_enable": "false",
+    "virtio_win_iso": "./images/virtio-win.iso",
+    "vm_name": "windows_10",
+    "winrm_timeout": "6h",
+    "vmx_version": "14"
+  }
+}
